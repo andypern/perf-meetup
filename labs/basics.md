@@ -18,25 +18,39 @@ This is a basics lab, meaning for some of you, it will probably be pretty rudime
 Environment
 -----
 
-Packet.net has graciously provided credits which will allow you to spinup linux instances for these excercises.  Before coming today, you should have signed up for an account on packet.net.  Once you've done so, you can provide your username to eric@packet.net and he can set you up with enough credits to use for today's session.  There might even be some left over for your experimentation after :)
+Packet.net has graciously provided the infrastructure which will allow you to spinup linux instances for these excercises.  On your way into today's meetup, you will have provided your email address, in exchange for a playing card.  
+
+***Do not lose this card: you need it for the lab, and you'll want to keep it for a chance to win a $50 Amazon gift card!***
+
+Go ahead and check your email, and look for either an invitation to join an existing project, or for a link to setup a new account with Packet.net.  
+
+You will not be charged for anything you do today, as it will all be governed by the project we created for this lab.  Packet is also providing you with an INVITE code which gives you $25 of free credits, which are yours to use!  That's enough for approximately 3 weeks of `type0` server time, running 24x7.
+
+code: `INVITE25`  
 
 
 
 Lab instructions
 ------------
 
-### setup your instance (6-8 mins)
+### setup your instance (10-15 mins)
 
 To get started, you'll want to spin up a single linux instance.  For consistency sake, we recommend that you choose CentOS 7 for your operating system
 
-1.  Login to Packet.net
+1.  Login to www.packet.net
 	* ***If you do not have a login, please talk to one of the lab helpers to get you setup***
-2. Click `Deploy`
-	![image](pics/01.deploy_instance.png)
+2. Click `Manage`
 
 3. Select `Perf lab 101`  
 	* ***if this project does not show up for you, talk to one of the lab helpers to get your account added to this project.***
-4.  Choose `Servers` and click `Proceed`
+	![image](pics/xx-project-select.png)
+
+	
+4.  Click `Deploy New Server`
+5. Again, make sure the right project is chosen, make sure `Servers` is selected, and click `Proceed`
+
+	![image](pics/01.deploy_instance.png)
+
 5. Server details
 	* For `Hostname` , put in your username (without the @domain.com).  Its important that you use something that will be unique from the other participants, so if in doubt, use firstInitialLastName, eg: `apernsteiner`
 	* For `Type` , choose `Type 0`
@@ -46,7 +60,7 @@ To get started, you'll want to spin up a single linux instance.  For consistency
 	* Click `Deploy`
 	![image](pics/02.instance.config.png)
 	
-6.  Deploy typically takes 5 minutes, to get your very own bare-metal server.
+6.  Deploy typically takes 5-10 minutes, to get your very own bare-metal server.
 	![image](pics/03.deploy.status.png)
 
 
@@ -72,9 +86,10 @@ Once you have your IP address, which should look something like `147.75.73.xx` ,
 
 		ssh root@147.75.73.xx
 		
-If you are prompted for a password, it means your SSH key isn't setup either on the instance, or on your laptop, but that's OK.  You can retrieve the root password from the instance details page in Packet.net's console:
+If you are prompted for a password, it means your SSH key isn't setup either on the instance, or on your laptop.  If that's the case, please raise your hand and a friendly lab helper will get you sorted out.  If you want to sort it out on your own, refer to this documentation:
 
-![image](pics/08.root.passwd.png)
+* [generate-ssh-keys](https://help.packet.net/quick-start/generate-ssh-keys)
+* [ssh-access](https://help.packet.net/technical/infrastructure/ssh-access)
 
 Once you are in, you should see a prompt like this:
 
@@ -97,79 +112,95 @@ Whenever you are either troubleshooting an issue, or are wanting to benchmark pe
 
 
 1. Get info about all network interfaces
-
-	    ifconfig -a
 	
+		    ifconfig -a
+		
 	You've probably used this tool many times, but how often do you pay attention to every field?  You can easily use it to get things like:
-
+	
     * list of interfaces (look for `bond0` , `eth0` , etc)
 	* IP address(es), subnet mask
 	* MTU size (this will be important in future labs)
 	* any RX/TX errors
 	* Total bytes & packets sent through each interface
-
-Get a list of currently listening IP addresses on your instance via:
 	
-		    ifconfig -a | grep inet
-***Note: you may notice that you see more than one IP address for your instance.  This is normal, as your instance has both a Public (Internet facing) and Private (internal packet.net facing) address.  Make a note of both of them***
+	Get a list of currently listening IP addresses on your instance via:
+		
+			    ifconfig -a | grep inet
+	***Note: you may notice that you see more than one IP address for your instance.  This is normal, as your instance has both a Public (Internet facing) and Private (internal packet.net facing) address.  Make a note of both of them***
 
 
 2.  connection type and speed of ifaces
 
-The `ethtool` utility is installed on most linux variants by default, however the fields which are displayed may vary from version to version.
-
-The simplest incantation is:
-
-	    ethtool eth0 
-
-You can replace `eth0` with `bond0`, or `bond0:0`.  Experiment with this and see what you find.  
-
-You can also determine the network driver being used by an interface via:
-
-        ethtool -i eth0
-
-This is useful for ensuring that your interface is running a current version of the driver, and can also help identify the vendor.  Another quick way to determine vendor is via:
-
-        lspci | grep Ethernet
-
+	The `ethtool` utility is installed on most linux variants by default, however the fields which are displayed may vary from version to version.
+	
+	The simplest incantation is:
+	
+		    ethtool eth0 
+	
+	You can replace `eth0` with `bond0`, or `bond0:0`.  Experiment with this and see what you find.  
+	
+	You can also determine the network driver being used by an interface via:
+	
+	        ethtool -i eth0
+	
+	This is useful for ensuring that your interface is running a current version of the driver, and can also help identify the vendor.  Another quick way to determine vendor is via:
+	
+	        lspci | grep Ethernet
+	
 	Note that ethtool usage can vary from system to system, you'll want to experiment on other systems to make sure you know what to expect.  This tool is useful to make sure you know:
-
+	
 	* Link detected?
 	* fiber/copper 
 	* Negotiated speed 
-
+	
 	More advanced uses include setting interface specific parameters such as flow control, tcp-segment-offload, and more.  Be careful when using flags which can change settings, as they may not always do what you expect... for this lab, you won't be changing any settings, just observing them.
 
 
 
 3.  What fileSystems are mounted
- In the excercise today, we'll be focusing on locally and NFS mounted filesystems.  The `mount` command, when run with no options shows the filesystems which are mounted to your instance, and some details about them.  The `df` command shows slightly different details, including the amount of space free/available. 
-    
-	    mount
+	 In the excercise today, we'll be focusing on locally and NFS mounted filesystems.  The `mount` command, when run with no options shows the filesystems which are mounted to your instance, and some details about them.  The `df` command shows slightly different details, including the amount of space free/available. 
+	    
+		    mount
     and df:
-
-	    df -h
-
-**Note: in some cases, the `df` command can hang, especially when there is a stale NFS mount.  In those scenarios, the `mount` command is advised, since it will not cause the system to attempt to query the remote filesystem, and will not get hung** 
+	
+		    df -h
+	
+	**Note: in some cases, the `df` command can hang, especially when there is a stale NFS mount.  In those scenarios, the `mount` command is advised, since it will not cause the system to attempt to query the remote filesystem, and will not get hung** 
 
 4.  OS related details
-Its also nice to know what type of OS you are on.  When on RHEL & variants (CentOS , Scientific-Linux, and of course RHEL), you can run:
-
-        cat /etc/redhat-release
-
+	Its also nice to know what type of OS you are on.  When on RHEL & variants (CentOS , Scientific-Linux, and of course RHEL), you can run:
+	
+	        cat /etc/redhat-release
+	
     On most unix/linux distro's, you can determine the kernel version and other details via:
-    
-        uname -a
-    
-        
+	    
+	        uname -a
+	    
+	        
 
 ### Set some quick environmental variables
 
-To make life a little easier, set some environmental variables for yourself.  In order to persist them (so that you don't have to reset them every time you login to your instance), put them in your .bashrc file.  Run the following commands to do so (make sure to use double quotes (`""`) when specified, as single quotes (`''`) may cause variables to get escaped:
+To make life a little easier, set some environmental variables for yourself.  In order to persist them (so that you don't have to reset them every time you login to your instance), put them in your .bashrc file.  Run the following commands to do so (make sure to use double quotes (`""`) when specified, as single quotes (`''`) may cause variables to get escaped.
 
-1.  NFS_SERVER_IP:
+1. ` NFS_SERVER_IP`:
 
-		echo "export NFS_SERVER_IP=10.100.142.3" >> /root/.bashrc 
+	When you walked in the room, you should have picked up a playing card.  Not only is this card your chance to win a prize, but you also need it to determine what NFS server to use.  Depending on which card you have, copy/paste the appropriate command:
+	***Important: ONLY paste the line which corresponds to the card you were issued!***
+	
+	* Hearts:
+	
+			echo "export NFS_SERVER_IP=10.100.142.7" >> /root/.bashrc 
+	* Diamonds:
+	
+			echo "export NFS_SERVER_IP=10.100.142.9" >> /root/.bashrc 
+	
+	* Clubs:
+	
+			echo "export NFS_SERVER_IP=10.100.142.11" >> /root/.bashrc
+	
+	* Spades:
+	
+			echo "export NFS_SERVER_IP=10.100.142.13" >> /root/.bashrc
 
 2.  When you are done appending variables to your .bashrc file, run the following to ensure that they are available for your current session, you should not need to do this again (unless you add or change things in .bashrc):
 
@@ -180,11 +211,11 @@ To make life a little easier, set some environmental variables for yourself.  In
 		env|grep NFS
 	output should be:
 	
-		NFS_SERVER_IP=10.100.142.3
+		NFS_SERVER_IP=10.100.x.x
  
 ### Fileserver environmental discovery (~5 mins)
 
-The fileserver you will be mounting is at `10.100.142.3` , it is an NFS server, also running Centos-7.  
+The fileserver you will be mounting an NFS server, also running Centos-7.  
 
 Any time you are working on a remote fileserver, its a good idea to determine connectivity between it and your host.  
 
@@ -195,7 +226,7 @@ Any time you are working on a remote fileserver, its a good idea to determine co
 	     ip route get $NFS_SERVER_IP
      output, which shows the target address, gateway, interface, and source address:
 	
-	     10.100.142.3 via 10.100.142.4 dev bond0  src 10.100.142.5
+	     10.100.142.x via 10.100.142.4 dev bond0  src 10.100.142.5
 
 	Another tool you can use is the 'traceroute' utility:
 
@@ -212,44 +243,49 @@ Any time you are working on a remote fileserver, its a good idea to determine co
 
 	    showmount -e $NFS_SERVER_IP 
 
-3.  Mount the NFS server
+4.  Mount the NFS server
+
+    first make a directory locally where you will mount to:
 
 	    mkdir /mnt/nfs
+    Then mount:
+
 	    mount -t nfs -o tcp,rw,vers=3 $NFS_SERVER_IP:/export /mnt/nfs 
 
 	We'll save more indepth discussion of NFS mount opts for another session, as there are cases where you will want to experiment with things like rsize/wsize, readahead, and others.  For now, we want to make sure we're using TCP as the transport (as oppoed to UDP), and NFSv3 (as opposed to the default in RHEL-7, which is now NFSv4). 
 
-4.  Verify mount
+5.  Verify mount
 
 	    df -h | grep export 
     output:
     
-	    10.100.142.3:/export  493G  1.1G  466G   1% /mnt/nfs
+	    10.100.142.x:/export  218G  1.3G  206G   1% /mnt/nfs
     or:
     
 	    mount | grep export
+
     output:
     
-	    10.100.142.3:/export on /mnt/nfs type nfs (rw,relatime,vers=3,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,mountaddr=10.100.142.3,mountvers=3,mountport=20048,mountproto=tcp,local_lock=none,addr=10.100.142.3)
+	    10.100.142.x:/export on /mnt/nfs type nfs (rw,relatime,vers=3,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,mountaddr=10.100.142.x,mountvers=3,mountport=20048,mountproto=tcp,local_lock=none,addr=10.100.142.x)
 
 	Note that the `mount` command will show you some additional options, including some that you did not specify.  These represent defaults for your system/OS.  Any time you are running tests or cataloging an environment, its important to make note of which mount options are in use for accurate and valid reproduction of results and issues.  We'll cover some additional detail on NFS mount options in a future lab.
 
-5.  Its nice to have NFS servers in your `/etc/fstab` so that you can remount them later without having to specify the full mount command.  To do this, just run the following command:
+6.  Its nice to have NFS servers in your `/etc/fstab` so that you can remount them later without having to specify the full mount command.  To do this, just run the following command:
 
 		echo "$NFS_SERVER_IP:/export /mnt/nfs nfs rsize=32768,wsize=32768,proto=tcp,hard,rw,vers=3 0 0" >> /etc/fstab
 
-6.  Verify that your addition took, and that it shows the proper IP via:
+7.  Verify that your addition took, and that it shows the proper IP via:
 
 		tail -n 1 /etc/fstab
 	output:
 	
-		10.100.142.3:/export /mnt/nfs nfs rsize=32768,wsize=32768,proto=tcp,hard,rw,vers=3 0 0
+		10.100.142.x:/export /mnt/nfs nfs rsize=32768,wsize=32768,proto=tcp,hard,rw,vers=3 0 0
 
-7.  Unmount & remount the NFS server so that it uses your fstab additions via:
+8.  Unmount & remount the NFS server so that it uses your fstab additions via:
 
         umount -lf /mnt/nfs && mount /mnt/nfs
 
-8.  Verify:
+9.  Verify:
 
         mount | grep export
 
@@ -336,36 +372,41 @@ Now that you have an NFS server mounted, you want to ensure that you can Create/
 
 1.  Vary block size in DD
 
-So far you've just done testing with relatively large block sizes (1MB).  However, in the real world things don't typically line up this way.  For instance, many databases (such as postgres/mysql) will use much smaller units, such as 4K or 8K.  You can experiment and see how different block sizes behave. 
-
-eg:
-
-    dd if=/dev/zero of=/mnt/nfs/$HOSTNAME/mysql.dat bs=2K count=$((1024*1024))
-    This will make a 2GB file, using 2Kilobyte block sizes.
-
-Note that in some cases, you may not see a large difference in performance when changing the block size.  There are a number of reasons for this, one being that for sequential operations, NFS clients will batch up requests instead of sending each 2KB write request across the wire separately.  That's where the 'wsize' option comes in.  If you want to see what happens when 'actual' 2K requests traverse the wire, you'll want to modify your /etc/fstab entry for your NFS server and modify the rsize and wsize as folows:
-
-	rsize=2048,wsize=2048
+	So far you've just done testing with relatively large block sizes (1MB).  However, in the real world things don't typically line up this way.  For instance, many databases (such as postgres/mysql) will use much smaller units, such as 4K or 8K.  You can experiment and see how different block sizes behave. 
 	
-Once you modify /etc/fstab, run the following to flush cache and remount:
-
-	umount -lf /mnt/nfs && mount /mnt/nfs
+	eg:
 	
-You can verify that your settings took by running the following:
-
-	mount | grep nfs
-
-Now remove the file:
-
-    rm /mnt/nfs/$HOSTNAME/mysql.dat
-
-And try again:
-
-    dd if=/dev/zero of=/mnt/nfs/$HOSTNAME/mysql.dat bs=2K count=$((1024*1024))
-
-Notice the difference?
-
+	    dd if=/dev/zero of=/mnt/nfs/$HOSTNAME/mysql.dat bs=2K count=$((1024*1024))
 	
+	This will make a 2GB file, using 2Kilobyte block sizes.
+	
+	Note that in some cases, you may not see a large difference in performance when changing the block size.  There are a number of reasons for this, one being that for sequential operations, NFS clients will batch up requests instead of sending each 2KB write request across the wire separately.  That's where the 'wsize' option comes in.  If you want to see what happens when 'actual' 2K requests traverse the wire, you'll want to modify your `/etc/fstab` entry for your NFS server and modify the rsize and wsize as folows:
+	
+		rsize=2048,wsize=2048
+		
+	***Note: this assumes you know how to use a text editor, such as `vi` or `vim` : if you don't know how to use `vi`, you can install `nano` via***:
+	
+		yum install -y nano	
+		
+	Once you modify `/etc/fstab`, run the following to flush cache and remount:
+	
+		umount -lf /mnt/nfs && mount /mnt/nfs
+		
+	You can verify that your settings took by running the following:
+	
+		mount | grep nfs
+	
+	Now remove the file:
+	
+	    rm /mnt/nfs/$HOSTNAME/mysql.dat
+	
+	And try again:
+	
+	    dd if=/dev/zero of=/mnt/nfs/$HOSTNAME/mysql.dat bs=2K count=$((1024*1024))
+	
+	Notice the difference?
+	
+		
 
 2.  The 'direct' flag
 What if you want to bypass the client cache for reads & writes?  Also..what if you want the client to send a separate request for each 2K write request?  On linux, you have the 'direct' flag, which does a few things:
@@ -389,15 +430,19 @@ Verify :
 Now write a new file, note that we are going to specify only a 20MB file, because this can take a LONG time otherwise:
 
 	        dd if=/dev/zero of=/mnt/nfs/$HOSTNAME/mysql.direct.dat bs=2K count=$((20*1024)) oflag=direct
-    Notice the speed delta between buffered and non-buffered writes.  We'll explore this in a little more detail in a future lab.
+
+Notice the speed delta between buffered and non-buffered writes.  We'll explore this in a little more detail in a future lab.
         
 
 3.  Adding concurrency
 This will be covered in more detail in a future lab, but consider that many real world scenarios involve a number of clients performing operations against a server simultaneously.  Unfortunately, DD is relatively limited in this nature, and to do proper testing, one must employ tools which are more centered around benchmarking.  However, you can do some simple tests with just DD:
 
+```
     for i in `seq 2`
         do dd if=/dev/zero of=/mnt/nfs/$HOSTNAME/multithread_${i} bs=1M count=1024 & 
     done
+```
+
 This launches 2 DD threads into the background.  You won't get an aggregate result from them, rather you'll get two individual results, but its a start.  Try varying the threadcount from 2 -> 10 and see what you get..
 
 ***Note: your shell will return immediately when you launch this command.  However, you will see output in your shell after each thread completes***
@@ -416,7 +461,7 @@ Using /dev/zero is typically the fastest method of generating synthetic data on 
 
     3.  Run your test, this time using your created file as the input:
 
-        dd if=/dev/shm/1GB.file of=/mnt/nfs/$HOSTNAME/1GB.random bs=1M 
+            dd if=/dev/shm/1GB.file of=/mnt/nfs/$HOSTNAME/1GB.random bs=1M 
 
 ## Other useful tools
 
