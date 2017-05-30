@@ -137,7 +137,7 @@ Whenever you are either troubleshooting an issue, or are wanting to benchmark pe
 	
 		    ethtool eth0 
 	
-	You can replace `eth0` with `bond0`, or `bond0:0`.  Experiment with this and see what you find.  
+	You can replace `eth0` with `bond0`, or `bond0:0`.  Experiment with this and see what you find.  Try and figure out how fast the interfaces are, and perhaps what type of connection media is being used.
 	
 	You can also determine the network driver being used by an interface via:
 	
@@ -409,58 +409,58 @@ Now that you have an NFS server mounted, you want to ensure that you can Create/
 		
 
 2.  The 'direct' flag
-What if you want to bypass the client cache for reads & writes?  Also..what if you want the client to send a separate request for each 2K write request?  On linux, you have the 'direct' flag, which does a few things:
-
+	What if you want to bypass the client cache for reads & writes?  Also..what if you want the client to send a separate request for each 2K write request?  On linux, you have the 'direct' flag, which does a few things:
+	
     * Bypasses the client side writeback cache
     * Forces each 2K call to be sent across the wire, instead of being coalesced up to the client's `wsize`
     * Alerts the NFS server that the client wishes every WRITE call to be committed to stable storage before the server responds saying "all clear".  On some NFS servers, this means it has to be committed to physical disk, on others, NvRAM is used to buffer stable writes.
-
-To do this, lets first change our client-side mount opts back to their 32K defaults, in /etc/fstab:
-
-        rsize=32768,wsize=32768
-
-Umount/remount:
-
-        umount -lf /mnt/nfs && mount /mnt/nfs
-
-Verify :
-
-        mount | grep export
-
-Now write a new file, note that we are going to specify only a 20MB file, because this can take a LONG time otherwise:
-
-	        dd if=/dev/zero of=/mnt/nfs/$HOSTNAME/mysql.direct.dat bs=2K count=$((20*1024)) oflag=direct
-
-Notice the speed delta between buffered and non-buffered writes.  We'll explore this in a little more detail in a future lab.
+	
+	To do this, lets first change our client-side mount opts back to their 32K defaults, in /etc/fstab:
+	
+	        rsize=32768,wsize=32768
+	
+	Umount/remount:
+	
+	        umount -lf /mnt/nfs && mount /mnt/nfs
+	
+	Verify :
+	
+	        mount | grep export
+	
+	Now write a new file, note that we are going to specify only a 20MB file, because this can take a LONG time otherwise:
+	
+		        dd if=/dev/zero of=/mnt/nfs/$HOSTNAME/mysql.direct.dat bs=2K count=$((20*1024)) oflag=direct
+	
+	Notice the speed delta between buffered and non-buffered writes.  We'll explore this in a little more detail in a future lab.
         
 
 3.  Adding concurrency
-This will be covered in more detail in a future lab, but consider that many real world scenarios involve a number of clients performing operations against a server simultaneously.  Unfortunately, DD is relatively limited in this nature, and to do proper testing, one must employ tools which are more centered around benchmarking.  However, you can do some simple tests with just DD:
-
-```
-    for i in `seq 2`
-        do dd if=/dev/zero of=/mnt/nfs/$HOSTNAME/multithread_${i} bs=1M count=1024 & 
-    done
-```
-
-This launches 2 DD threads into the background.  You won't get an aggregate result from them, rather you'll get two individual results, but its a start.  Try varying the threadcount from 2 -> 10 and see what you get..
-
-***Note: your shell will return immediately when you launch this command.  However, you will see output in your shell after each thread completes***
+	This will be covered in more detail in a future lab, but consider that many real world scenarios involve a number of clients performing operations against a server simultaneously.  Unfortunately, DD is relatively limited in this nature, and to do proper testing, one must employ tools which are more centered around benchmarking.  However, you can do some simple tests with just DD:
+	
+	```
+	    for i in `seq 2`
+	        do dd if=/dev/zero of=/mnt/nfs/$HOSTNAME/multithread_${i} bs=1M count=1024 & 
+	    done
+	```
+	
+	This launches 2 DD threads into the background.  You won't get an aggregate result from them, rather you'll get two individual results, but its a start.  Try varying the threadcount from 2 -> 10 and see what you get..
+	
+	***Note: your shell will return immediately when you launch this command.  However, you will see output in your shell after each thread completes***
 
 4.  Using 'random' data
-Using /dev/zero is typically the fastest method of generating synthetic data on a unix system, however there are some situations where it is not advisable to use.  In particular, if the target filesystem has inline compression, deduplication, or both: `/dev/zero` can produce invalid results, as the 'zeros' it writes can be compressed or deduplicated significantly, reducing I/O on the target storage subsystem.  In those cases, you'll want to use `/dev/urandom`.  However, because this device requires more CPU to generate data, it can introduce its own performance bottleneck into your test.  Because of this, its advisable to first write random data to a RAM disk or TMPFS.
-
+	Using /dev/zero is typically the fastest method of generating synthetic data on a unix system, however there are some situations where it is not advisable to use.  In particular, if the target filesystem has inline compression, deduplication, or both: `/dev/zero` can produce invalid results, as the 'zeros' it writes can be compressed or deduplicated significantly, reducing I/O on the target storage subsystem.  In those cases, you'll want to use `/dev/urandom`.  However, because this device requires more CPU to generate data, it can introduce its own performance bottleneck into your test.  Because of this, its advisable to first write random data to a RAM disk or TMPFS.
+	
     1.  Check to see if /dev/shm is mounted, as well as how much space is available:
-
+	
 	        df -h | grep shm
     
     2.  Create a file in `/dev/shm` that is less than the available space:
     ***this might take 5 minutes to complete. if you would prefer, use a smaller `count`***
-
+	
             dd if=/dev/urandom of=/dev/shm/1GB.file bs=1M count=1024  
-
+	
     3.  Run your test, this time using your created file as the input:
-
+	
             dd if=/dev/shm/1GB.file of=/mnt/nfs/$HOSTNAME/1GB.random bs=1M 
 
 ## Other useful tools
